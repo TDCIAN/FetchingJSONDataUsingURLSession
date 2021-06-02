@@ -18,6 +18,13 @@ struct Model: Codable {
     let completed: Bool
 }
 
+struct PostModel: Codable {
+    let id: Int
+    let userId: Int
+    let title: String
+    let body: String
+}
+
 // viewModel
 class ViewModel: ObservableObject {
     @Published var items = [Model]()
@@ -30,17 +37,48 @@ class ViewModel: ObservableObject {
             do {
                 if let data = data {
                     let result = try JSONDecoder().decode([Model].self, from: data)
-                    
                     DispatchQueue.main.async {
                         self.items = result
+                        print("get - items: \(self.items)")
                     }
                 } else {
-                    print("No data")
+                    print("get - no data")
                 }
             } catch let error {
-                print("error - \(error.localizedDescription)")
+                print("get error - \(error.localizedDescription)")
             }
         }.resume()
+    }
+    
+    // post data
+    func postData() {
+        guard let url = URL(string: postUrl) else { return }
+        
+        let title = "foo"
+        let bar = "bar"
+        let userId = 1
+        
+        let body: [String: Any] = ["title": title, "body": bar, "userId": userId]
+        
+        let finalData = try! JSONSerialization.data(withJSONObject: body, options: .prettyPrinted)
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.httpBody = finalData
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        URLSession.shared.dataTask(with: request) { (data, response, error) in
+            do {
+                if let data = data {
+                    let result = try JSONDecoder().decode(PostModel.self, from: data)
+                    print("post - result: \(result)")
+                } else {
+                    print("post - no data")
+                }
+            } catch let error {
+                print("post - error: \(error.localizedDescription)")
+            }
+        }
     }
 }
 
@@ -55,6 +93,7 @@ struct ContentView: View {
                 }
             }.onAppear(perform: {
                 viewModel.loadData()
+                viewModel.postData()
             })
             .navigationTitle("Datas")
         }
